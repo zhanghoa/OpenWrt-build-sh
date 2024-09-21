@@ -9,7 +9,14 @@ git pull
 
 # 5. 添加固件日期
 sed -i 's/IMG_PREFIX:=/IMG_PREFIX:=$(BUILD_DATE_PREFIX)-/g' ./include/image.mk
-sed -i '/DTS_DIR:=$(LINUX_DIR)/a\BUILD_DATE_PREFIX := $(shell date +\'%F\')' ./include/image.mk
+
+# 设置 BUILD_DATE_PREFIX 变量为当前日期
+BUILD_DATE_PREFIX=$(date +%F)
+
+# 检查并添加 BUILD_DATE_PREFIX 到 image.mk 文件
+if ! grep -q "BUILD_DATE_PREFIX" ./include/image.mk; then
+  sed -i '/DTS_DIR:=$(LINUX_DIR)/a BUILD_DATE_PREFIX := $(shell date +\'%F\')' ./include/image.mk
+fi
 
 # 8. 修改固件时区
 sed -i 's/UTC/UTC-8/g' package/base-files/files/bin/config_generate
