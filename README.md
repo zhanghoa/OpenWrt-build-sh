@@ -10,4 +10,4 @@ chmod +x customize_immortalwrt.sh
 
 四、可以远程加载本脚本
 
-sudo bash -c 'bash <(curl -s https://github.com/zhanghoa/OpenWrt-build-sh/raw/refs/heads/main/customize_immortalwrt.sh)'
+sudo bash -c 'bash <(curl -s https://raw.githubusercontent.com/zhanghoa/OpenWrt-build-sh/refs/heads/main/customize_immortalwrt.sh)'
