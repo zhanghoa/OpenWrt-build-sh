@@ -20,24 +20,58 @@ log "更新 Feeds..."
 # 3. 替换插件
 log "替换插件..."
 PLUGIN_DIR="feeds/luci/applications/luci-app-homeproxy"
+TEMP_CLONE_DIR="/tmp/homeproxy-clone"
 
-# 删除旧的插件目录（如果存在）
-if [ -d "$PLUGIN_DIR" ]; then
-    log "删除旧的插件目录: $PLUGIN_DIR"
-    rm -rf "$PLUGIN_DIR"
+# 如果插件目录不存在或者不是一个 Git 仓库
+if [ ! -d "$PLUGIN_DIR" ] || [ ! -d "$PLUGIN_DIR/.git" ]; then
+    # 使用 Git 克隆新的插件到临时目录
+    log "克隆新的插件仓库到: $TEMP_CLONE_DIR"
+    git clone -b master https://github.com/bulianglin/homeproxy.git "$TEMP_CLONE_DIR"
+
+    # 检查克隆是否成功
+    if [ ! -d "$TEMP_CLONE_DIR/.git" ]; then
+        log "错误：克隆失败，请检查网络连接或目标仓库的有效性。"
+        exit 1
+    else
+        LAST_COMMIT=$(cd "$TEMP_CLONE_DIR" && git log -1 --pretty=format:"%H")
+        log "克隆成功，最后一次提交为: $LAST_COMMIT"
+        
+        # 删除旧的插件目录（如果存在）
+        if [ -d "$PLUGIN_DIR" ]; then
+            log "删除旧的插件目录: $PLUGIN_DIR"
+            rm -rf "$PLUGIN_DIR"
+        fi
+
+        # 将临时目录移动到正式位置
+        mv "$TEMP_CLONE_DIR" "$PLUGIN_DIR"
+        log "新插件已安装到: $PLUGIN_DIR"
+    fi
+else
+    # 如果插件目录已经是一个 Git 仓库，获取本地和远程的最新提交
+    cd "$PLUGIN_DIR"
+    
+    # 获取本地最新提交
+    LOCAL_COMMIT=$(git log -1 --pretty=format:"%H")
+    
+    # 获取远程最新提交
+    REMOTE_COMMIT=$(git ls-remote origin master | awk '{print $1}')
+    
+    # 比较本地和远程的最新提交
+    if [ "$LOCAL_COMMIT" != "$REMOTE_COMMIT" ]; then
+        log "检测到远程有新的提交，开始更新插件..."
+        git pull
+        LAST_COMMIT=$(git log -1 --pretty=format:"%H")
+        log "更新完成，最后一次提交为: $LAST_COMMIT"
+    else
+        log "本地插件已是最新版本，无需更新。"
+    fi
+    # 返回到原始的工作目录
+    cd -
 fi
 
-# 使用 Git 克隆新的插件
-log "克隆新的插件仓库到: $PLUGIN_DIR"
-git clone -b master https://github.com/bulianglin/homeproxy.git "$PLUGIN_DIR"
-
-# 检查克隆是否成功
-if [ ! -d "$PLUGIN_DIR/.git" ]; then
-    log "错误：克隆失败，请检查网络连接或目标仓库的有效性。"
-    exit 1
-else
-    LAST_COMMIT=$(cd "$PLUGIN_DIR" && git log -1 --pretty=format:"%H")
-    log "克隆成功，最后一次提交为: $LAST_COMMIT"
+# 清理临时目录（如果存在）
+if [ -d "$TEMP_CLONE_DIR" ]; then
+    rm -rf "$TEMP_CLONE_DIR"
 fi
 
 # 4. 添加固件日期
